@@ -1,0 +1,385 @@
+改网口名称
+
+先把uss平台开机自启动注释了：/etc/rc.d/init.d/zxcdn_uss
+
+10.47.242.77机子上改网口名字：
+
+/root/zxcdn-uss-netconfig：
+
+#!/bin/bash
+
+ip link set enp9s0f0 down
+
+ip link set enp9s0f0 name eth0
+
+ip link set eth0 up
+
+ip addr add 10.47.242.77/24 dev eth0
+
+ip route add default via 10.47.242.1 dev eth0
+
+
+
+
+
+
+
+开机自启动相关的文件
+
+/etc/rc.d/rc.local
+
+加上：
+
+/root/zxcdn-uss-netconfig &
+
+
+
+b CZMSSMediaStreamSetup_unitest.cpp:109
+
+
+
+display /20i $pc
+
+x /1xw 0x7fffffffdd68
+
+
+
+disassemble   函数
+
+
+
+
+
+image.png
+
+
+
+
+
+使用gdb时增加-tui选项，打开gdb后运行 layout regs 命令。注意最好加上-tui，否则很大可能会出现花屏现象。
+在gdb中运行 set disassemble-next-line on ，表示自动反汇编后面要执行的代码。
+
+```
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# this is python2 script
+
+
+
+import xlwt
+import xml.etree.cElementTree as ET
+import sys
+reload(sys)
+sys.setdefaultencoding('utf-8')
+def GetConfigItem(ConfigName, xml_file_path):
+    ans=[]
+    with open('tmp.txt','a') as f:
+        if ConfigName is None:
+            MODULE_LOGGER.error_log('the ConfigName is None.')
+            return None
+        try:
+            xml_tree = ET.parse(xml_file_path)
+            root = xml_tree.getroot()
+            description=root.get('name',None)
+            for sw in root.getiterator('Ver'):
+                tmp=[]
+                for neighbor in sw.getiterator('Ver'):
+                    item_name=neighbor.get('name',None)
+                    print item_name
+                    verdetail=neighbor.find("VerDetail").text
+                    item_node=neighbor.find("item")
+
+                    checkmethod=item_node.get('checkMethod',None)
+                    checkstandard=item_node.get('checkStandard',None)
+                    advice=item_node.get('advice',None)
+                    script=item_node.get('ScriptName',None)
+#                print verdetail,checkmethod,checkstandard,advice
+                    atmp=ConfigName+","+description+","+item_name+","+verdetail+","+checkstandard+","+checkmethod+","+advice+","+script+"\n"
+                    #print atmp
+                    tmp.append(ConfigName)
+                    tmp.append(description)
+                    tmp.append(item_name)
+                    tmp.append(verdetail)
+                    tmp.append(checkstandard)
+                    tmp.append(checkmethod)
+                    tmp.append(advice)
+                    tmp.append(script)
+                    ans.append(tmp)
+                #return neighbor.text
+        except Exception,e:
+            print e
+    return ans
+
+
+
+class My_xlwt(object):
+    def __init__(self, sheet_name='sheet_1', re_write=True):
+        '''
+        自定义类说明：
+        :param sheet_name:默认sheet表对象名称，默认值为 'sheet_1'
+        :param re_write: 单元格重写写功能默认开启
+        '''
+        self.work_book = xlwt.Workbook()
+        self.sheet = self.work_book.add_sheet(sheet_name,cell_overwrite_ok=re_write)
+        self.col_data = {}
+
+    def save(self, file_name):
+        self.work_book.save(file_name)
+
+    def write(self, row, col, label):
+        self.sheet.write(row, col, label)
+        if col not in self.col_data.keys():
+            self.col_data[col] = []
+            self.col_data[col].append(label)
+        else:
+            self.col_data[col].append(label)
+
+
+    def write_row(self, start_row, start_col, date_list):
+        for col, label in enumerate(date_list):
+            self.write(start_row, start_col + col, label)
+
+        return self.sheet.row(start_row)
+
+
+    def write_rows(self, start_row, start_col, data_lists):
+        row_obj = []
+        for row_, data in enumerate(data_lists):
+            if isinstance(data, list):
+                self.write_row(start_row + row_, start_col, data)
+                row_obj.append(self.sheet.row(start_row + row_))
+            else:
+                msg = '数据列表不是嵌套列表数据，而是%s' % type(data)
+                raise Exception(msg)
+
+        return row_obj
+
+if __name__ == '__main__':
+    # 实例化自写类
+    '''
+    test = My_xlwt()
+
+    ans1=GetConfigItem('IPTV_LIVE_SS','IPTV_LIVE_SS_CHECK_BEFORE_UPGRADE.xml')
+    ans2=GetConfigItem('IPTV_LIVE_SS','IPTV_LIVE_SS_CHECK_AFTER_UPGRADE.xml')
+    ans3=GetConfigItem('IPTV_SS','IPTV_SS_CHECK_BEFORE_UPGRADE.xml')
+    ans4 = GetConfigItem('IPTV_SS', 'IPTV_SS_CHECK_AFTER_UPGRADE.xml')
+    ans5 = GetConfigItem('IPTV_AGENT','IPTV_AGENT_CHECK_BEFORE_UPGRADE.xml')
+    ans6 = GetConfigItem('IPTV_AGENT', 'IPTV_AGENT_CHECK_AFTER_UPGRADE.xml')
+    ans7 = GetConfigItem('IPTV_LIVE_AGENT', 'IPTV_LIVE_AGENT_CHECK_BEFORE_UPGRADE.xml')
+    ans8 = GetConfigItem('IPTV_LIVE_AGENT', 'IPTV_LIVE_AGENT_CHECK_AFTER_UPGRADE.xml')
+    ans9 = GetConfigItem('OS_COMMON', 'OS_COMMON_CHECK_BEFORE_UPGRADE.xml')
+    ans0 = GetConfigItem('OS_COMMON', 'OS_COMMON_CHECK_AFTER_UPGRADE.xml')
+    header=[u'网元组件',u'检查类别',u'检查项',u'检查名称',u'检查标准',u'检查方法',u'处理建议',u'检查脚本']
+    test.write_row(0,0,header)
+    Len=1
+    test.write_rows(Len,0,ans1)
+    Len=Len+len(ans1)
+    test.write_rows(Len, 0, ans2)
+    Len = Len + len(ans2)
+    test.write_rows(Len, 0, ans3)
+    Len = Len + len(ans3)
+    test.write_rows(Len, 0, ans4)
+    Len = Len + len(ans4)
+    test.write_rows(Len, 0, ans5)
+    Len = Len + len(ans5)
+    test.write_rows(Len, 0, ans6)
+    Len = Len + len(ans6)
+    test.write_rows(Len, 0, ans7)
+    Len = Len + len(ans7)
+    test.write_rows(Len, 0, ans8)
+    Len = Len + len(ans8)
+    test.write_rows(Len, 0, ans9)
+    Len = Len + len(ans9)
+    test.write_rows(Len, 0, ans0)
+    Len = Len + len(ans0)
+
+    # 在1行1列写入一行数据
+    # 保存文件
+    test.save('my_test.xls')
+    '''
+    test2 = My_xlwt()
+
+    ans1=GetConfigItem('IPTV_LIVE_SS','IPTV_LIVE_SS_CHECK_BEFORE_UPGRADE_EN.xml')
+    ans2=GetConfigItem('IPTV_LIVE_SS','IPTV_LIVE_SS_CHECK_AFTER_UPGRADE_EN.xml')
+
+    ans3=GetConfigItem('IPTV_SS','IPTV_SS_CHECK_BEFORE_UPGRADE_EN.xml')
+    ans4 = GetConfigItem('IPTV_SS', 'IPTV_SS_CHECK_AFTER_UPGRADE_EN.xml')
+
+    ans5 = GetConfigItem('IPTV_AGENT','IPTV_AGENT_CHECK_BEFORE_UPGRADE_EN.xml')
+
+    ans6 = GetConfigItem('IPTV_AGENT', 'IPTV_AGENT_CHECK_AFTER_UPGRADE_EN.xml')
+
+    ans7 = GetConfigItem('IPTV_LIVE_AGENT', 'IPTV_LIVE_AGENT_CHECK_BEFORE_UPGRADE_EN.xml')
+
+    ans8 = GetConfigItem('IPTV_LIVE_AGENT', 'IPTV_LIVE_AGENT_CHECK_AFTER_UPGRADE_EN.xml')
+
+    ans9 = GetConfigItem('OS_COMMON', 'OS_COMMON_CHECK_BEFORE_UPGRADE_EN.xml')
+
+    ans0 = GetConfigItem('OS_COMMON', 'OS_COMMON_CHECK_AFTER_UPGRADE_EN.xml')
+    header=['NetType','CheckBag','CheckItem','CheckDetail','CheckStandard','CheckMethod','Advice','ScriptName']
+    test2.write_row(0,0,header)
+    Len=1
+    test2.write_rows(Len,0,ans1)
+    Len=Len+len(ans1)
+
+    test2.write_rows(Len, 0, ans2)
+    Len = Len + len(ans2)
+    test2.write_rows(Len, 0, ans3)
+    Len = Len + len(ans3)
+    test2.write_rows(Len, 0, ans4)
+    Len = Len + len(ans4)
+    test2.write_rows(Len, 0, ans5)
+    Len = Len + len(ans5)
+    test2.write_rows(Len, 0, ans6)
+    Len = Len + len(ans6)
+    test2.write_rows(Len, 0, ans7)
+    Len = Len + len(ans7)
+    test2.write_rows(Len, 0, ans8)
+    Len = Len + len(ans8)
+    test2.write_rows(Len, 0, ans9)
+    Len = Len + len(ans9)
+    test2.write_rows(Len, 0, ans0)
+    Len = Len + len(ans0)
+
+    # 在1行1列写入一行数据
+    # 保存文件
+    test2.save('my_test_en.xls')
+    ```
+    
+    
+    
+    ```
+    #!/bin/bash# Linux自动化配置系统加固脚本read -p "设置密码最大使用天数：" Ased -i "/^PASS_MAX_DAYS/c\PASS_MAX_DAYS ${A}" /etc/login.defsread -p "密码更改之间允许的最少天数" Bsed -i "/^PASS_MIN_DAYS/c\PASS_MIN_DAYS ${B}" /etc/login.defsread -p "设置密码最短长度：" Csed -i "/^PASS_MIN_LEN/c\PASS_MIN_LEN ${C}" /etc/login.defsread -p "设置密码过期提前警告天数：" Dsed -i "/^PASS_WARN_AGE/c\PASS_WARN_AGE ${D}" /etc/login.defsread -p "设置历史命令保存条目：" Esed -i "/^HISTSIZE/c\HISTSIZE=$E" /etc/profileread -p "设置用户无操作自动注销时间（秒）：" Fsed -i "/^HISTSIZE/a\TMOUT=$F" /etc/profile
+# 设置密码复杂度加固，新密码必须同时包含数字、小写字母、大写字母、且新密码不能和旧密码相同# difok=N 默认值为10。这个参数设置允许的新、旧密码相同字符的个数。# retry=N 改密码时，输入密码的次数，默认值是1# dcredit=N 限制新密码中至少有多少个数字。参数的值如果为负数，例如dcredit=-2，则表示密码中最少需要2位数字# ucredit=N 限制新密码中至少有多少个大写字符。# lcredit=N 限制新密码中至少有多少个小写字符。# ocredit=N：定义用户密码中必须包含多少个特殊字符（除数字、字母之外）# minlen=10实际上表示最小分数为10，而不是简单的最小长度为10。密码每有一个任意字符会有一分，另外，ucredit/lcredit/dcredit/ocredit默认值均为1，表示密码中四种字符的类别数，每多一种，就会得到额外的一分。echo "设置新密码复杂度加固：必须同时包含数字、小写字母、大写字母、且新密码不能和旧密码相同"sed -i "/pam_pwquality.so/c\password    requisite     pam_pwquality.so try_first_pass local_users_only retry=3 authtok_type= difok=6 minlen=8 ucredit=-1 lcredit=-1 dcredit=-1" /etc/pam.d/system-auth
+echo "设置防暴力破解加固：输入密码错误次数超过3次，普通用户锁定120秒，root用户锁定300秒！"n=$(grep -c "pam_tally2.so" /etc/pam.d/sshd)if [ "$n" -eq 0 ]; then    # deny=3 登录拒绝三次    # unlock_time=120 普通用户锁定后等待时间，120s    # even_deny_root root用户登录失败三次也会被锁定    # root_unlock_time=300 root用户锁定后等待时间，300s    sed -i "/%PAM-1.0/a\auth        required        pam_tally2.so deny=3 unlock_time=120 even_deny_root root_unlock_time=300" /etc/pam.d/sshdfi
+n=$(grep -c "pam_wheel.so" /etc/pam.d/sshd)echo "设置禁止root用户远程登录"sed -i "/PermitRootLogin/c\PermitRootLogin no" /etc/ssh/sshd_config
+echo "设置只允许wheel组的用户可以使用su命令切换到root用户"sed -i "/pam_wheel.so use_uid/c\auth           required        pam_wheel.so use_uid" /etc/pam.d/sun=$(grep -c "SU_WHEEL_ONLY" /etc/login.defs)if [ "$n" -eq 0 ]; then    echo "SU_WHEEL_ONLY yes" >>/etc/login.defsfi# 重启sshd，使配置生效service sshd restart
+echo "***********************************************"echo "即将检查系统中的账户"echo "系统中有登录权限的用户有："awk -F: '($7=="/bin/bash") {print $1}' /etc/passwdecho "***********************************************"echo "系统中UID=0的用户有："awk -F: '($3=="0") {print $1}' /etc/passwdecho "***********************************************"echo "请为当前系统中UID大于等于1000且没有密码的用户设置密码："npass_user=($(awk -F: '($3>=1000) {print $1}' /etc/passwd))for uname in "${npass_user[@]}"; do    user=$(awk -F : -v auname="${uname}" '($1==auname)&&($2=="!!") {print $1}' /etc/shadow)    if [ -n "${user}" ]; then        read -p "是否为${user}设置密码,请输入YES/NO：" npass_flag        if [[ "${npass_flag}" = [Yy][Ee][Ss] ]]; then            passwd "$user"        fi
+    fidone
+echo "即将对系统中重要文件进行锁定，锁定后将无法添加、删除用户和组"read -p "警告：此脚本运行后将无法添加和删除用户和组，确定输入Y，取消输入N:" chattr_flagcase "${chattr_flag}" in[Y,y])    chattr +i /etc/passwd    chattr +i /etc/group    chattr +i /etc/shadow    chattr +i /etc/gshadow    echo "锁定passwd、shadow、group、gshadow！"    ;;[N,n])    chattr -i /etc/passwd    chattr -i /etc/group    chattr -i /etc/shadow    chattr -i /etc/gshadow    echo "未锁定passwd、shadow、group、gshadow！"    ;;*)     echo "请输入Y/y or N/n"esac
+```
+
+
+
+
+```
+将原始话单按1000000分割成多个
+
+split -d -l1000000 Diyquery_export_20210131061747077.csv_27
+
+
+
+将每个分割的文件移到其同名目录下，并重命名为test.csv
+
+for i in x*; do mv $i tmp; mkdir $i; mv tmp $i/test.csv; done
+
+
+
+将cdr.py脚本复制到分割目录下
+
+for i in x*; do cp -v /home/jiangsu/shenpeng/cdr.py_vod $i/cdr.py; done
+
+for i in x*; do cp -v /home/jiangsu/shenpeng/cdr.py $i/cdr.py; done
+
+
+
+将content.db脚本复制到分割目录下
+
+for i in x*; do cp -v /home/jiangsu/shenpeng/content.db $i; done
+
+
+
+对每个分割目录起脚本
+
+for i in x*; do (cd $i; python2 cdr.py &); done
+
+
+
+将每个分割目录下转换完成的结果汇总到20210127.txt
+
+for i in x*; do cat $i/recovery.txt >> 20210127.txt; done
+
+
+
+创建并切换到output目录
+
+mkdir output
+
+cd output
+
+
+
+将汇总20210127.txt按行平均分割成30个
+
+split -d -n l/30 ../20210127.txt
+
+
+
+将分割文件按时间重命名
+
+for i in x*; do mv $i $(echo $i | sed 's/x/20210127-/'); done
+
+
+
+对每个分割文件进行打包
+
+for i in *; do (tar czf $i.tar.gz $i &); done
+```
+
+
+
+```
+jw=$(ll -rt|tail -n1|awk -F' ' '{print $9}')
+zcat $jw|awk -F'|' '{if($91>300 && $31==0 && $24==1)print $24,$9,$10,$29,$89,$90,$91,$92,$93,$94,$95,$96,$97,$98,$99,$100}'|wc -l
+zcat $jw|awk -F'|' '{if($91>=0 && $31==0 && $24==1)print $24,$9,$10,$29,$89,$90,$91,$92,$93,$94,$95,$96,$97,$98,$99,$100}'|wc -l
+|awk -F'|' '{if($91>300 && $24==1 && (substr($9,19)-substr($89,19))>100)print $9,$89,$90,$91}'|wc -l
+|awk -F'|' '{print $29}'|sort|uniq -c|wc -l
+sort|uniq -c|sort -rn
+
+```
+
+
+```
+#!/bin/bash
+CAP_DIR=/tmp/CP-AGENT-SIGDUMP             # 网络包存放目录
+CAP_NUM=20                                                  # 最多允许20个包回滚
+CAP_SIZE=50                                                    # 一个网络包size 50MB
+CAP_FILE=cp-agent_sig_dump.cap                  # 网络包文件名称
+
+CurUserID=$(id -u)
+if [ "${CurUserID}" -ne 0 ]
+then
+    echo "This script must be run as root"'!'
+    exit -5
+fi
+
+if [[ -d "${CAP_DIR}" ]]
+then
+    echo "The capture dir ${CAP_DIR} is exist"'!'
+    echo "Please rename(delete) it first"'!'
+    exit -1
+fi
+
+if [[ -f "${CAP_DIR}" ]]
+then
+    echo "Please delete file "${CAP_DIR}" first"'!'
+    exit -2
+fi
+
+mkdir -p "${CAP_DIR}"
+chmod 777 "${CAP_DIR}"
+
+cd "${CAP_DIR}"
+nohup tcpdump -ibond5 -s0 -C${CAP_SIZE} -W${CAP_NUM} -w${CAP_FILE} port 6015 and host 172.16.5.139 > /dev/null &          # tcpdump抓包命令，具体host、port和本地网口根据实际情况填写
+
+if ! ps -ef | grep tcpdump 2>&1 > /dev/null
+then
+    echo "Failed to start sig packet capturing"'!'
+    exit -3
+fi
+
+echo "Scceeded to start sig packet capturing"'!'
+```
+
+
+
